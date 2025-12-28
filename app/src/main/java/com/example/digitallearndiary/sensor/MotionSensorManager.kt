@@ -6,11 +6,13 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import com.example.digitallearndiary.model.SensorEvent as AppSensorEvent
+import android.content.Intent
+import com.example.digitallearndiary.receiver.ConnectivityBroadcastReceiver
 
 import kotlin.math.abs
 
 class MotionSensorManager(
-    context: Context,
+    private val context: Context,
     private val onEventDetected: (AppSensorEvent) -> Unit
 ) : SensorEventListener {
 
@@ -41,6 +43,10 @@ class MotionSensorManager(
         if (movement > 2.5 && now - lastEventTime > COOLDOWN_MS) {
             lastEventTime = now
             onEventDetected(AppSensorEvent("FOCUS_LOST", "MOTION", now))
+            val intent = Intent(context, ConnectivityBroadcastReceiver::class.java)
+            intent.putExtra("type", "FOCUS_LOST")
+            intent.putExtra("source", "MOTION")
+            context.sendBroadcast(intent)
         }
     }
 
