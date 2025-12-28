@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.hardware.usb.UsbManager
+import com.example.digitallearndiary.receiver.ConnectivityBroadcastReceiver
 
 class UsbReceiver(
     private val onEvent: (ConnectivityEvent) -> Unit
@@ -13,6 +14,7 @@ class UsbReceiver(
         val now = System.currentTimeMillis()
 
         when (intent.action) {
+
             UsbManager.ACTION_USB_DEVICE_ATTACHED -> {
                 onEvent(
                     ConnectivityEvent(
@@ -21,6 +23,13 @@ class UsbReceiver(
                         timestamp = now
                     )
                 )
+
+
+                val broadcastIntent =
+                    Intent(context, ConnectivityBroadcastReceiver::class.java)
+                broadcastIntent.putExtra("type", "USB_ATTACHED")
+                broadcastIntent.putExtra("source", "USB")
+                context.sendBroadcast(broadcastIntent)
             }
 
             UsbManager.ACTION_USB_DEVICE_DETACHED -> {
@@ -31,6 +40,13 @@ class UsbReceiver(
                         timestamp = now
                     )
                 )
+
+
+                val broadcastIntent =
+                    Intent(context, ConnectivityBroadcastReceiver::class.java)
+                broadcastIntent.putExtra("type", "USB_DETACHED")
+                broadcastIntent.putExtra("source", "USB")
+                context.sendBroadcast(broadcastIntent)
             }
         }
     }
