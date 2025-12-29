@@ -17,11 +17,11 @@ interface TaskDao {
     suspend fun delete(item : Task)
 
     @Query("SELECT * FROM task WHERE courseId = :courseId ORDER BY id DESC")
-    fun getTaskByCourseId(courseId: Int): Flow<List<Task>>
+    fun getTaskByCourseId(courseId: String): Flow<List<Task>>
 
     @Query("SELECT * FROM task WHERE courseId = :courseId AND isCompleted = 0")
-    fun getPendingTask(courseId: Int): Flow<List<Task>>
+    fun getPendingTask(courseId: String): Flow<List<Task>>
 
     @Query("DELETE FROM task WHERE courseId = :courseId AND isCompleted = 1")
-    suspend fun deleteCompletedTask(courseId: Int)
+    suspend fun deleteCompletedTask(courseId: String)
 }

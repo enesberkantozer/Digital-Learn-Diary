@@ -23,14 +23,14 @@ interface CourseDao {
     fun getAllCourse(): Flow<List<Course>>
 
     @Query("SELECT * FROM course WHERE id = :courseId")
-    suspend fun getCourseById(courseId: Int): Course?
+    suspend fun getCourseById(courseId: String): Course?
 
     @Transaction
     @Query("SELECT * FROM course WHERE id = :courseId")
-    fun getCourseWithSession(courseId: Int): Flow<CourseAndSession>
+    fun getCourseWithSession(courseId: String): Flow<CourseAndSession>
 
     @Transaction
     @Query("SELECT * FROM course WHERE id = :courseId")
-    fun getCourseWithTask(courseId: Int): Flow<CourseAndTask>
+    fun getCourseWithTask(courseId: String): Flow<CourseAndTask>
 
 }

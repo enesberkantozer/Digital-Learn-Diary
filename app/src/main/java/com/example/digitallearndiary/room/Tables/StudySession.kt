@@ -3,6 +3,7 @@ package com.example.digitallearndiary.room.Tables
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(
     foreignKeys = [
@@ -15,9 +16,9 @@ import androidx.room.PrimaryKey
     ]
 )
 data class StudySession(
-    @PrimaryKey(autoGenerate = true)
-    val id : Int = 0,
-    val courseId : Int,
+    @PrimaryKey
+    val id : String = UUID.randomUUID().toString(),
+    val courseId : String,
     val startTime : Long,
     val endTime : Long,
     val totalTime : Int
