@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+
+    id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
 }
 
 android {
@@ -19,6 +21,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
     }
 
     buildTypes {
@@ -30,15 +35,26 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
     }
+
     buildFeatures {
         compose = true
+
+        buildConfig = true
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
 }
 
@@ -65,4 +81,21 @@ dependencies {
     implementation("androidx.room:room-ktx:$room_version")
 
     ksp("androidx.room:room-compiler:$room_version")
+
+
+
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+
+
+    //implementation("com.google.android.material:material:1.11.0")
+    //implementation("androidx.compose.ui:ui")
+    //implementation("androidx.compose.ui:ui-graphics")
+    //implementation("androidx.compose.ui:ui-tooling-preview")
+    //implementation("androidx.navigation:navigation-compose:2.7.7")
+    //implementation("io.coil-kt:coil-compose:2.5.0")
+    //androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    //debugImplementation("androidx.compose.ui:ui-tooling")
 }
