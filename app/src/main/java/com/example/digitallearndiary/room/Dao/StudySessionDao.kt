@@ -16,7 +16,10 @@ interface StudySessionDao {
     @Delete
     suspend fun delete(item : StudySession)
 
-    @Query("SELECT * FROM studysession WHERE courseId = :courseId ORDER BY startTime DESC")
+    @Query("SELECT * FROM studysession")
+    fun getAllSessions(): Flow<List<StudySession>>
+
+    @Query("SELECT * FROM studysession WHERE courseId = :courseId ORDER BY endTime DESC")
     fun getSessionByCourseId(courseId: String): Flow<List<StudySession>>
 
     @Query("SELECT SUM(totalTime) FROM studysession WHERE courseId = :courseId")

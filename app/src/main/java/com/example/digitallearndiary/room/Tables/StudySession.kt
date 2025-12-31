@@ -18,8 +18,8 @@ import java.util.UUID
 data class StudySession(
     @PrimaryKey
     val id : String = UUID.randomUUID().toString(),
-    val courseId : String,
-    val startTime : Long,
-    val endTime : Long,
-    val totalTime : Int
+    val courseId : String = "",
+    val startTime : Long = 0,
+    val endTime : Long = 0,
+    val totalTime : Int = 0
 )

@@ -17,9 +17,9 @@ interface ConnectivityDao {
     suspend fun delete(item: Connectivity)
 
     @Query("SELECT * FROM connectivity WHERE source = :sourceType ORDER BY timestamp DESC")
-    suspend fun getWithSource(sourceType : String ) : Flow<List<Connectivity>>
+    fun getWithSource(sourceType : String ) : Flow<List<Connectivity>>
 
     @Query("SELECT * FROM connectivity WHERE type = :type ORDER BY timestamp DESC")
-    suspend fun getWithType(type : String ) : Flow<List<Connectivity>>
+    fun getWithType(type : String ) : Flow<List<Connectivity>>
 
 }

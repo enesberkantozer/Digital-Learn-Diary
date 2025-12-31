@@ -19,7 +19,7 @@ interface CourseDao {
     @Delete
     suspend fun delete(item : Course)
 
-    @Query("SELECT * FROM course ORDER BY id DESC")
+    @Query("SELECT * FROM course ORDER BY createdTime DESC")
     fun getAllCourse(): Flow<List<Course>>
 
     @Query("SELECT * FROM course WHERE id = :courseId")

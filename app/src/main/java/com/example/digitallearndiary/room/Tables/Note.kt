@@ -5,8 +5,7 @@ import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 import java.util.UUID
 
-@Entity (
-
+@Entity(
     foreignKeys = [
         ForeignKey(
             entity = Course::class,
@@ -16,14 +15,11 @@ import java.util.UUID
         )
     ]
 )
-
-data class Task(
+data class Note(
     @PrimaryKey
-    val id : String= UUID.randomUUID().toString(),
+    val id : String = UUID.randomUUID().toString(),
     val courseId : String = "",
-    val taskDesc : String = "",
-    val isCompleted : Boolean = false,
+    val title : String = "",
+    val content : String = "",
     val createdTime : Long = 0
-
 )
-

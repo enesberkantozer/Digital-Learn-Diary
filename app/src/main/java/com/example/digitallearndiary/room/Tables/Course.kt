@@ -8,8 +8,8 @@ import java.util.UUID
 data class Course(
     @PrimaryKey
     val id : String = UUID.randomUUID().toString(),
-    val courseName : String,
-    val totalTargetMinute : Int,
-    val imageTextList : List<String> = emptyList()
+    val courseName : String = "",
+    val colorInt: Int = 0,
+    val createdTime : Long =0
 
 )

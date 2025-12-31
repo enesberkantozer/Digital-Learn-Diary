@@ -6,11 +6,13 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.digitallearndiary.room.Dao.ConnectivityDao
 import com.example.digitallearndiary.room.Dao.CourseDao
+import com.example.digitallearndiary.room.Dao.NoteDao
 import com.example.digitallearndiary.room.Dao.SensorDao
 import com.example.digitallearndiary.room.Dao.StudySessionDao
 import com.example.digitallearndiary.room.Dao.TaskDao
 import com.example.digitallearndiary.room.Tables.Connectivity
 import com.example.digitallearndiary.room.Tables.Course
+import com.example.digitallearndiary.room.Tables.Note
 import com.example.digitallearndiary.room.Tables.Sensor
 import com.example.digitallearndiary.room.Tables.StudySession
 import com.example.digitallearndiary.room.Tables.Task
@@ -21,7 +23,8 @@ import com.example.digitallearndiary.room.Tables.Task
         StudySession::class,
         Task::class,
         Connectivity::class,
-        Sensor::class
+        Sensor::class,
+        Note::class
     ],
     version = 1,
     exportSchema = false
@@ -34,6 +37,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
     abstract fun connectivityDao(): ConnectivityDao
     abstract fun sensorDao(): SensorDao
+    abstract fun noteDao(): NoteDao
 
     companion object {
         @Volatile

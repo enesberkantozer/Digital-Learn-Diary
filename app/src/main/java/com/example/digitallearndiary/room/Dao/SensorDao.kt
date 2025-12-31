@@ -16,8 +16,8 @@ interface SensorDao {
     suspend fun delete(item: Sensor)
 
     @Query("SELECT * FROM sensor WHERE source = :sourceType ORDER BY timestamp DESC")
-    suspend fun getWithSource(sourceType : String ) : Flow<List<Sensor>>
+    fun getWithSource(sourceType : String ) : Flow<List<Sensor>>
 
     @Query("SELECT * FROM sensor WHERE type = :type ORDER BY timestamp DESC")
-    suspend fun getWithType(type : String ) : Flow<List<Sensor>>
+    fun getWithType(type : String ) : Flow<List<Sensor>>
 }
