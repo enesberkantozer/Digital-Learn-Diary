@@ -28,7 +28,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.DigitalLearnDiary">
+        android:theme="@style/Theme.DigitalLearnDiary"
+        android:name=".firestore.FirebaseInitializer">
 
         <activity
             android:name=".MainActivity"
