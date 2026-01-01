@@ -1,4 +1,4 @@
-package com.example.digitallearndiary.Cloud
+package com.example.digitallearndiary.cloud
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -6,7 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
-import com.example.digitallearndiary.BasicData.UygulamaModeli
+import com.example.digitallearndiary.basicData.UygulamaModeli
 import java.io.File
 import java.util.Date
 

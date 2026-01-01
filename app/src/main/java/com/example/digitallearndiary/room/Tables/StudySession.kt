@@ -21,5 +21,7 @@ data class StudySession(
     val courseId : String = "",
     val startTime : Long = 0,
     val endTime : Long = 0,
-    val totalTime : Int = 0
+    val hour : Int = 0,
+    val min : Int = 0,
+    val sec : Int = 0
 )

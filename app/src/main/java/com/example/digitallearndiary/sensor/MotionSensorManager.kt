@@ -5,7 +5,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import com.example.digitallearndiary.model.SensorEvent as AppSensorEvent
+import com.example.digitallearndiary.sensor.model.SensorEvent as AppSensorEvent
 import android.content.Intent
 import com.example.digitallearndiary.receiver.ConnectivityBroadcastReceiver
 
