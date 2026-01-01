@@ -26,7 +26,7 @@ import com.example.digitallearndiary.room.Tables.Task
         Sensor::class,
         Note::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 

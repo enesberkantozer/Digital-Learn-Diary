@@ -28,9 +28,18 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.example.digitallearndiary.room.Tables.Course
 
 @Composable
-fun CourseDetailScreen(courseName: String, courseColor: Color, navController: NavHostController, onBack: () -> Unit) {
+fun CourseDetailScreen(
+    course: Course, // Artık direkt nesne geliyor
+    navController: NavHostController,
+    onBack: () -> Unit
+) {
+    // Nesneden renk ve isim değerlerini alıyoruz
+    val courseColor = Color(course.colorInt)
+    val courseName = course.courseName
+
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("Notlar", "Seanslar", "Görevler")
 
@@ -81,15 +90,15 @@ fun CourseDetailScreen(courseName: String, courseColor: Color, navController: Na
         Box(modifier = Modifier.padding(innerPadding)) {
             when (selectedTabIndex) {
                 0 -> NotesTab(
-                    courseName = courseName,
-                    themeColor = courseColor,
-                    onAddNoteClick = {
-                        val colorValue = courseColor.toArgb().toLong()
-                        navController.navigate("add_note/$courseName/$colorValue")
+                    course = course,
+                    onAddNoteClick = { navController.navigate("add_note/${course.id}") },
+                    onNoteClick = { note ->
+                        // Notun ID'sini navigasyonla gönderiyoruz
+                        navController.navigate("add_note/${course.id}?noteId=${note.id}")
                     }
                 )
-                1 -> SessionsTab(courseName = courseName, themeColor = courseColor)
-                2 -> TasksTab(courseName = courseName, themeColor = courseColor)
+                1 -> SessionsTab(course = course) // Artık nesnenin tamamı gidiyor
+                2 -> TasksTab(course = course)   // Artık nesnenin tamamı gidiyor
             }
         }
     }

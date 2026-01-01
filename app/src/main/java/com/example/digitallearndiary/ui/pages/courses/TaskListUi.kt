@@ -1,8 +1,10 @@
 package com.example.digitallearndiary.ui.pages.courses
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,19 +17,28 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -39,16 +50,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.digitallearndiary.room.Tables.Course
+import com.example.digitallearndiary.room.Tables.Task
+import com.example.digitallearndiary.viewModels.TaskViewModel
+import com.google.android.play.integrity.internal.ac
 
 @Composable
-fun TasksTab(courseName: String, themeColor: Color) {
-    val tasks = remember {
-        mutableStateListOf(
-            TaskItem("Vize projesini bitir", false),
-            TaskItem("Haftalık okumaları yap", false),
-            TaskItem("Ödev 1 teslimi", true)
-        )
-    }
+fun TasksTab(
+    course: Course,
+    viewModel: TaskViewModel = viewModel()
+) { // Parametre olarak artık nesnenin tamamı geliyor
+    // Renk Int tipinde olduğu için tekrar Compose Color'a çeviriyoruz
+    val themeColor = Color(course.colorInt)
+    val courseName = course.courseName
+
+    // Veritabanındaki görevleri kurs id'sine göre asenkron olarak dinliyoruz
+    val tasks by viewModel.getTasksByCourse(course.id)!!.collectAsState(initial = emptyList())
 
     var showCompleted by remember { mutableStateOf(false) }
     var newTaskText by remember { mutableStateOf("") }
@@ -86,7 +104,15 @@ fun TasksTab(courseName: String, themeColor: Color) {
                     trailingIcon = {
                         IconButton(onClick = {
                             if (newTaskText.isNotBlank()) {
-                                tasks.add(0, TaskItem(newTaskText, false))
+                                // YENİ GÖREV EKLEME
+                                viewModel.upsertTask(
+                                    Task(
+                                        taskDesc = newTaskText,
+                                        isCompleted = false,
+                                        courseId = course.id, // Kurs bağlantısı
+                                        createdTime = System.currentTimeMillis()
+                                    )
+                                )
                                 newTaskText = ""
                                 isAddingTask = false
                             }
@@ -113,58 +139,153 @@ fun TasksTab(courseName: String, themeColor: Color) {
             }
 
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                val activeTasks = tasks.filter { !it.isDone }
-                items(activeTasks) { task ->
-                    TaskRow(task = task, themeColor = themeColor, onCheckedChange = {
-                        val index = tasks.indexOf(task)
-                        if (index != -1) tasks[index] = task.copy(isDone = it)
-                    })
+                val activeTasks = tasks.filter { !it.isCompleted }
+
+                if (activeTasks.isEmpty()) {
+                    item { Text("Aktif görev yok.", color = Color.Gray) }
+                }
+
+                // BURASI: key kullanımı ve Wrapper çağrısı
+                items(activeTasks, key = { it.id }) { task ->
+                    SwipeableTaskItem(
+                        task = task,
+                        themeColor = themeColor,
+                        onDelete = { viewModel.deleteTask(task) },
+                        onCheckedChange = { isChecked ->
+                            viewModel.upsertTask(task.copy(isCompleted = isChecked))
+                        }
+                    )
                 }
             }
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                val completedTasks = tasks.filter { it.isDone }
+                val completedTasks = tasks.filter { it.isCompleted }
+
                 if (completedTasks.isEmpty()) {
                     item { Text("Henüz tamamlanmış görev yok.", color = Color.Gray) }
                 }
-                items(completedTasks) { task ->
-                    TaskRow(task = task, themeColor = themeColor, onCheckedChange = {
-                        val index = tasks.indexOf(task)
-                        if (index != -1) tasks[index] = task.copy(isDone = it)
-                    })
+
+                // BURASI: key kullanımı ve Wrapper çağrısı
+                items(completedTasks, key = { it.id }) { task ->
+                    SwipeableTaskItem(
+                        task = task,
+                        themeColor = themeColor,
+                        onDelete = { viewModel.deleteTask(task) },
+                        onCheckedChange = { isChecked ->
+                            viewModel.upsertTask(task.copy(isCompleted = isChecked))
+                        }
+                    )
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskRow(task: TaskItem, themeColor: Color, onCheckedChange: (Boolean) -> Unit) {
+fun SwipeableTaskItem(
+    task: Task,
+    themeColor: Color,
+    onDelete: () -> Unit,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    // Diyalog görünürlüğünü kontrol eden state
+    var showDialog by remember { mutableStateOf(false) }
+
+    // Silme Onay Diyaloğu
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Görevi Sil") },
+            text = { Text("\"${task.taskDesc}\" silinecek. Emin misiniz?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDelete()
+                    showDialog = false
+                }) {
+                    Text("Sil", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("İptal")
+                }
+            }
+        )
+    }
+
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                showDialog = true // Kaydırma bittiğinde diyaloğu aç
+                false // Kartın hemen silinmesini engelle (onay bekliyoruz)
+            } else {
+                false
+            }
+        }
+    )
+
+    // Eğer diyalog kapatılırsa (İptal dendiğinde), kartı eski konumuna geri çek
+    LaunchedEffect(showDialog) {
+        if (!showDialog) {
+            dismissState.reset()
+        }
+    }
+
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            val color = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart)
+                Color.Red.copy(alpha = 0.8f) else Color.Transparent
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(vertical = 4.dp)
+                    .background(color, shape = MaterialTheme.shapes.medium),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Sil",
+                    tint = Color.White,
+                    modifier = Modifier.padding(end = 16.dp)
+                )
+            }
+        }
+    ) {
+        TaskRow(task = task, themeColor = themeColor, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+fun TaskRow(task: Task, themeColor: Color, onCheckedChange: (Boolean) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (task.isDone) Color.Transparent else MaterialTheme.colorScheme.surface
+            // Arka plan artık her zaman MaterialTheme yüzey rengi olacak
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = if (task.isDone) null else BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
+        // Kenarlık artık her zaman görünecek
+        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Checkbox(
-                checked = task.isDone,
+                checked = task.isCompleted,
                 onCheckedChange = onCheckedChange,
                 colors = CheckboxDefaults.colors(checkedColor = themeColor)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = task.title,
+                text = task.taskDesc,
                 style = MaterialTheme.typography.bodyLarge,
-                textDecoration = if (task.isDone) TextDecoration.LineThrough else null,
-                color = if (task.isDone) Color.Gray else Color.Unspecified
+                textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
+                color = if (task.isCompleted) Color.Gray else Color.Unspecified
             )
         }
     }
 }
-
-data class TaskItem(val title: String, val isDone: Boolean)

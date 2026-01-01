@@ -1,5 +1,8 @@
 package com.example.digitallearndiary.ui.pages.courses
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,22 +32,56 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.digitallearndiary.cloud.VisionService
+import com.example.digitallearndiary.room.Tables.Course
+import com.example.digitallearndiary.room.Tables.Note
+import com.example.digitallearndiary.viewModels.NoteViewModel
+import com.google.android.play.integrity.internal.f
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddNoteScreen(
-    courseName: String,
-    courseColor: Color,
-    onBack: () -> Unit
+    course: Course, // Artık nesneyi direkt alıyoruz
+    editingNote: Note? = null,
+    onBack: () -> Unit,
+    viewModel: NoteViewModel = viewModel()
 ) {
-    var noteTitle by remember { mutableStateOf("") }
-    var noteContent by remember { mutableStateOf("") }
+    // Nesneden renk ve isim değerlerini ayıklıyoruz
+    val courseColor = Color(course.colorInt)
+    val courseName = course.courseName
+
+    var noteTitle by remember(editingNote) {
+        mutableStateOf(editingNote?.title ?: "")
+    }
+    var noteContent by remember(editingNote) {
+        mutableStateOf(editingNote?.content ?: "")
+    }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            scope.launch {
+                // API çağrısı yapılıyor
+                val resultText = VisionService.resmiAnalizEt(context, it)
+
+                // Mevcut içeriğe ekleme yapılıyor (+= operatörü ile)
+                noteContent += "\n$resultText"
+            }
+        }
+    }
 
     Scaffold(
         modifier = Modifier.imePadding(),
@@ -61,7 +98,7 @@ fun AddNoteScreen(
                             )
                         )
                         Text(
-                            text = "Yeni Not",
+                            text = if (editingNote != null) "Düzenle" else "Yeni Not",
                             style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
                         )
                     }
@@ -73,7 +110,31 @@ fun AddNoteScreen(
                 },
                 actions = {
                     Button(
-                        onClick = { /* Kaydet */ },
+                        onClick = {
+                            if(noteTitle.isNotBlank() || noteContent.isNotBlank()) {
+                                if (editingNote != null) {
+                                    // GÜNCELLEME (Update)
+                                    viewModel.upsertNote(
+                                        editingNote.copy(
+                                            title = noteTitle,
+                                            content = noteContent,
+                                            // createdTime'ı koruyabilir veya güncelleyebilirsiniz
+                                        )
+                                    )
+                                } else {
+                                    // YENİ KAYIT (Insert)
+                                    viewModel.upsertNote(
+                                        Note(
+                                            title = noteTitle,
+                                            content = noteContent,
+                                            courseId = course.id,
+                                            createdTime = System.currentTimeMillis()
+                                        )
+                                    )
+                                }
+                                onBack() // Kayıt sonrası geri dön
+                            }
+                        },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = courseColor.copy(alpha = 0.1f),
                             contentColor = courseColor
@@ -90,7 +151,7 @@ fun AddNoteScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { /* OCR / Galeriye gitme işlemi */ },
+                onClick = { galleryLauncher.launch("image/*") },
                 containerColor = courseColor,
                 contentColor = Color.White,
                 icon = { Icon(Icons.Default.ImageSearch, contentDescription = null) },

@@ -1,10 +1,10 @@
-package com.example.digitallearndiary.BasicData
+package com.example.digitallearndiary.basicData
 
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.digitallearndiary.Cloud.VisionService
+import com.example.digitallearndiary.cloud.VisionService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

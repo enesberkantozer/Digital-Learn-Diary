@@ -11,6 +11,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -18,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -27,10 +29,15 @@ import com.example.digitallearndiary.ui.pages.AuthProfileScreen
 import com.example.digitallearndiary.ui.pages.courses.AddNoteScreen
 import com.example.digitallearndiary.ui.pages.courses.CourseDetailScreen
 import com.example.digitallearndiary.ui.pages.courses.CourseListScreen
+import com.example.digitallearndiary.viewModels.CourseViewModel
+import com.example.digitallearndiary.viewModels.NoteViewModel
 
 
 @Composable
 fun MainStudyApp() {
+    val courseViewModel: CourseViewModel = viewModel()
+    val noteViewModel: NoteViewModel = viewModel()
+
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Scaffold(
@@ -53,7 +60,7 @@ fun MainStudyApp() {
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (selectedTab) {
-                0 -> CourseNavigationWrapper()
+                0 -> CourseNavigationWrapper(courseViewModel, noteViewModel)
                 1 -> AuthProfileScreen()
             }
         }
@@ -61,49 +68,83 @@ fun MainStudyApp() {
 }
 
 @Composable
-fun CourseNavigationWrapper() {
+fun CourseNavigationWrapper(courseViewModel: CourseViewModel, noteViewModel: NoteViewModel) {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = "list") {
         composable("list") {
-            CourseListScreen(onCourseClick = { courseName, courseColor ->
-                val colorValue = courseColor.toArgb().toLong()
-                navController.navigate("detail/$courseName/$colorValue")
-            })
-        }
-        composable(
-            route = "detail/{courseName}/{courseColor}",
-            arguments = listOf(
-                navArgument("courseName") { type = NavType.StringType },
-                navArgument("courseColor") { type = NavType.LongType }
-            )
-        ) { backStackEntry ->
-            val name = backStackEntry.arguments?.getString("courseName") ?: ""
-            val colorVal = backStackEntry.arguments?.getLong("courseColor") ?: 0L
-
-            CourseDetailScreen(
-                courseName = name,
-                courseColor = Color(colorVal.toInt()),
-                navController = navController,
-                onBack = { navController.popBackStack() }
+            CourseListScreen(
+                viewModel = courseViewModel,
+                onCourseClick = { courseId ->
+                    navController.navigate("detail/$courseId")
+                }
             )
         }
 
         composable(
-            route = "add_note/{courseName}/{courseColor}",
+            route = "detail/{courseId}",
+            arguments = listOf(navArgument("courseId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("courseId") ?: ""
+
+            // ÖNEMLİ KISIM: ViewModel'deki listeden bu ID'ye sahip nesneyi buluyoruz
+            // collectAsState ile listeyi alıyoruz
+            val courses by courseViewModel.courses.collectAsState(initial = emptyList())
+            val selectedCourse = courses.find { it.id == id }
+
+            // Eğer ders bulunduysa ekranı çiz ve nesneyi gönder
+            selectedCourse?.let { course ->
+                CourseDetailScreen(
+                    course = course, // Artık parametre olarak nesne gidiyor!
+                    navController = navController,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+        }
+
+        composable(
+            route = "add_note/{courseId}",
+            arguments = listOf(navArgument("courseId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("courseId") ?: ""
+            val courses by courseViewModel.courses.collectAsState(initial = emptyList())
+            val selectedCourse = courses.find { it.id == id }
+
+            selectedCourse?.let { course ->
+                AddNoteScreen(
+                    course = course, // Burada da nesne gidiyor
+                    onBack = { navController.popBackStack() }
+                )
+            }
+        }
+
+        composable(
+            route = "add_note/{courseId}?noteId={noteId}",
             arguments = listOf(
-                navArgument("courseName") { type = NavType.StringType },
-                navArgument("courseColor") { type = NavType.LongType }
+                navArgument("courseId") { type = NavType.StringType },
+                navArgument("noteId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
             )
         ) { backStackEntry ->
-            val name = backStackEntry.arguments?.getString("courseName") ?: ""
-            val colorVal = backStackEntry.arguments?.getLong("courseColor") ?: 0L
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: ""
+            val noteId = backStackEntry.arguments?.getString("noteId")
 
-            AddNoteScreen(
-                courseName = name,
-                courseColor = Color(colorVal),
-                onBack = { navController.popBackStack() }
-            )
+            // courseId ile ilgili kurs nesnesini al
+            val course by courseViewModel.getWithId(courseId)!!.collectAsState(initial = null)
+
+            // Eğer noteId varsa veritabanından o notu bul
+            val editingNote by noteViewModel.getNoteById(noteId!!)!!.collectAsState(initial = null)
+
+            if (course != null) {
+                AddNoteScreen(
+                    course = course!!,
+                    editingNote = editingNote,
+                    onBack = { navController.popBackStack() }
+                )
+            }
         }
     }
 }

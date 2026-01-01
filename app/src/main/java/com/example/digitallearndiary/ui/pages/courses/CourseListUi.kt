@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -42,32 +42,33 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.digitallearndiary.room.Tables.Course
+import com.example.digitallearndiary.viewModels.CourseViewModel
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
 
 @Composable
-fun CourseListScreen(onCourseClick: (String, Color) -> Unit) {
-    val mockCourses = remember {
-        mutableStateListOf(
-            "Mobil Programlama" to Color.Blue,
-            "Veri Yapıları" to Color.Green
-        )
-    }
+fun CourseListScreen(viewModel: CourseViewModel, onCourseClick: (String) -> Unit) {
+    val courseList by viewModel.courses.collectAsState(initial = emptyList())
 
     var isAddingNewCourse by remember { mutableStateOf(false) }
-    var editingCourseIndex by remember { mutableStateOf<Int?>(null) }
+    var editingCourseId by remember { mutableStateOf<String?>(null) }
 
     var courseNameInput by remember { mutableStateOf("") }
     var selectedColor by remember { mutableStateOf(Color.Blue) }
@@ -76,11 +77,11 @@ fun CourseListScreen(onCourseClick: (String, Color) -> Unit) {
         courseNameInput = ""
         selectedColor = Color.Blue
         isAddingNewCourse = false
-        editingCourseIndex = null
+        editingCourseId = null
     }
 
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var indexToDelete by remember { mutableStateOf<Int?>(null) }
+    var courseToDelete by remember { mutableStateOf<Course?>(null) }
 
     if (showDeleteDialog) {
         AlertDialog(
@@ -89,7 +90,9 @@ fun CourseListScreen(onCourseClick: (String, Color) -> Unit) {
             text = { Text("Bu dersi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.") },
             confirmButton = {
                 TextButton(onClick = {
-                    indexToDelete?.let { mockCourses.removeAt(it) }
+                    courseToDelete?.let { course ->
+                        viewModel.delete(course)
+                    }
                     showDeleteDialog = false
                 }) { Text("Sil", color = Color.Red) }
             },
@@ -120,12 +123,12 @@ fun CourseListScreen(onCourseClick: (String, Color) -> Unit) {
                 Text("Derslerim", style = MaterialTheme.typography.headlineMedium)
             }
 
-            if (isAddingNewCourse || editingCourseIndex != null) {
+            if (isAddingNewCourse || editingCourseId != null) {
                 item {
                     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = if (editingCourseIndex != null) "Dersi Düzenle" else "Yeni Ders Ekle",
+                                text = if (editingCourseId != null) "Dersi Düzenle" else "Yeni Ders Ekle",
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -174,18 +177,36 @@ fun CourseListScreen(onCourseClick: (String, Color) -> Unit) {
 
                             Row(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.End) {
                                 TextButton(onClick = { resetForm() }) { Text("İptal") }
+                                val scope = rememberCoroutineScope()
                                 Button(onClick = {
-                                    if (courseNameInput.isNotEmpty()) {
-                                        val index = editingCourseIndex
-                                        if (index != null) {
-                                            mockCourses[index] = courseNameInput to selectedColor
-                                        } else {
-                                            mockCourses.add(0, courseNameInput to selectedColor)
+                                    scope.launch {
+                                        if (courseNameInput.isNotEmpty()) {
+
+                                            if (editingCourseId != null) {
+                                                // Artık suspend fonksiyon olan firstOrNull() burada çalışabilir
+                                                viewModel.getWithId(editingCourseId)?.firstOrNull()
+                                                    ?.let { oldCourse ->
+                                                        val updatedCourse = oldCourse.copy(
+                                                            courseName = courseNameInput,
+                                                            colorInt = selectedColor.toArgb(),
+                                                            createdTime = System.currentTimeMillis()
+                                                        )
+                                                        viewModel.upsert(updatedCourse)
+                                                    }
+                                            } else {
+                                                // Yeni kayıt kısmı
+                                                val newCourse = Course(
+                                                    courseName = courseNameInput,
+                                                    colorInt = selectedColor.toArgb(),
+                                                    createdTime = System.currentTimeMillis()
+                                                )
+                                                viewModel.upsert(newCourse)
+                                            }
+                                            resetForm()
                                         }
-                                        resetForm()
                                     }
                                 }) {
-                                    Text(if (editingCourseIndex != null) "Güncelle" else "Ekle")
+                                    Text(if (editingCourseId != null) "Güncelle" else "Ekle")
                                 }
                             }
                         }
@@ -193,14 +214,15 @@ fun CourseListScreen(onCourseClick: (String, Color) -> Unit) {
                 }
             }
 
-            itemsIndexed(
-                items = mockCourses,
-                key = { _, item -> item.first + item.hashCode() }
-            ) { index, (name, color) ->
+            items(
+                items = courseList,
+                key = { it.id }
+            ) { course ->
+                val color = Color(course.colorInt)
                 val dismissState = rememberSwipeToDismissBoxState(
                     confirmValueChange = { value ->
                         if (value == SwipeToDismissBoxValue.EndToStart) {
-                            indexToDelete = index
+                            courseToDelete = course
                             showDeleteDialog = true
                             false
                         } else false
@@ -238,18 +260,18 @@ fun CourseListScreen(onCourseClick: (String, Color) -> Unit) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onCourseClick(name, color) },
+                            .clickable { onCourseClick(course.id) },
                         colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))
                     ) {
                         ListItem(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             leadingContent = { Box(modifier = Modifier.width(6.dp).height(35.dp).background(color)) },
-                            headlineContent = { Text(name, fontWeight = FontWeight.Bold) },
+                            headlineContent = { Text(course.courseName, fontWeight = FontWeight.Bold) },
                             trailingContent = {
                                 IconButton(onClick = {
-                                    courseNameInput = name
+                                    courseNameInput = course.courseName
                                     selectedColor = color
-                                    editingCourseIndex = index
+                                    editingCourseId = course.id
                                     isAddingNewCourse = false
                                 }) {
                                     Icon(Icons.Default.Edit, contentDescription = "Düzenle", tint = Color.Gray)

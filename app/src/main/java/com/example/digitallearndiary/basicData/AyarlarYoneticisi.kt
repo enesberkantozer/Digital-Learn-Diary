@@ -1,4 +1,4 @@
-package com.example.digitallearndiary.BasicData
+package com.example.digitallearndiary.basicData
 
 import android.content.Context
 import androidx.datastore.preferences.core.*
@@ -11,10 +11,20 @@ public val Context.dataStore by preferencesDataStore(name = "uygulama_ayarlari")
 
 public class AyarlarYoneticisi(public val context: Context) {
 
+
+    // AyarlarYoneticisi içine ekle
+    public val emailAkisi: Flow<String> = oku("kullanici_email", "")
+
+    public suspend fun emailKaydet(email: String) {
+        datastoreSave("kullanici_email", email)
+    }
+
+
+
     /**
      * Esnek Kaydetme Fonksiyonu: Herhangi bir tipi güvenli bir şekilde kaydeder.
      */
-    public suspend fun <T> kaydet(anahtarAdı: String, deger: T) {
+    public suspend fun <T> datastoreSave(anahtarAdı: String, deger: T) {
         context.dataStore.edit { p ->
             @Suppress("UNCHECKED_CAST")
             val anahtar = when (deger) {
@@ -49,6 +59,6 @@ public class AyarlarYoneticisi(public val context: Context) {
     public val karanlikModAkisi: Flow<Boolean> = oku("karanlik_mod", false)
     public val profilResmiAkisi: Flow<String> = oku("profil_resmi_uri", "")
 
-    public suspend fun karanlikModSet(aktif: Boolean) = kaydet("karanlik_mod", aktif)
-    public suspend fun profilResmiSet(uri: String) = kaydet("profil_resmi_uri", uri)
+    public suspend fun karanlikModSet(aktif: Boolean) = datastoreSave("karanlik_mod", aktif)
+    public suspend fun profilResmiSet(uri: String) = datastoreSave("profil_resmi_uri", uri)
 }
