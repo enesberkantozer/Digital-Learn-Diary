@@ -32,7 +32,13 @@ object UiEventApi {
         }
 
 
-        context.registerReceiver(receiver, IntentFilter())
+        val filter = IntentFilter("com.example.digitallearndiary.UI_EVENT")
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(receiver, filter)
+        }
 
         return receiver
     }
