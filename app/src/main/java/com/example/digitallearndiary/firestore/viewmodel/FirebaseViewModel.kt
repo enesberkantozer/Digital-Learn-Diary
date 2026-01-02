@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.digitallearndiary.firestore.repository.SyncManager
 import kotlinx.coroutines.launch
 
-class MainViewModel(
+class FirebaseViewModel(
     private val syncManager: SyncManager
 ) : ViewModel() {
     fun syncData() {
@@ -16,11 +16,11 @@ class MainViewModel(
     }
 }
 
-class MainViewModelFactory(private val syncManager: SyncManager) : ViewModelProvider.Factory {
+class FirebaseViewModelFactory(private val syncManager: SyncManager) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
+        if (modelClass.isAssignableFrom(FirebaseViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return MainViewModel(syncManager) as T
+            return FirebaseViewModel(syncManager) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

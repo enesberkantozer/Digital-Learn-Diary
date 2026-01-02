@@ -11,10 +11,12 @@ class CourseRepository (
     private val courseDao: CourseDao,
     private val firestore: FirebaseFirestore
 ) {
-    suspend fun syncCourses() {
+    suspend fun syncCourses(userMail: String) {
         try {
             val localCourses = courseDao.getAllCourse().first()
-            val remoteSnapshot = firestore.collection("courses").get().await()
+            val remoteSnapshot = firestore.collection("users")
+                .document(userMail)
+                .collection("courses").get().await()
             val remoteCoursesMap = remoteSnapshot.documents.associate { it.id to it.toObject(Course::class.java) }
 
             for (localCourse in localCourses) {

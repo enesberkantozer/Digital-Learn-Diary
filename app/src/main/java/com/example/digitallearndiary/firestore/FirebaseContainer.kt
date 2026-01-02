@@ -6,11 +6,14 @@ import com.example.digitallearndiary.firestore.repository.NoteRepository
 import com.example.digitallearndiary.firestore.repository.StudySessionRepository
 import com.example.digitallearndiary.firestore.repository.SyncManager
 import com.example.digitallearndiary.firestore.repository.TaskRepository
-import com.example.digitallearndiary.firestore.viewmodel.MainViewModelFactory
+import com.example.digitallearndiary.firestore.viewmodel.FirebaseViewModelFactory
 import com.example.digitallearndiary.room.AppDatabase
 import com.google.firebase.firestore.FirebaseFirestore
+import com.example.digitallearndiary.basicData.AyarlarYoneticisi
 
 class FirebaseContainer(private val context: Context) {
+
+    val ayarlarYoneticisi by lazy { AyarlarYoneticisi(context) }
 
     private val database by lazy { AppDatabase.getDatabase(context) }
     private val firestore by lazy { FirebaseFirestore.getInstance() }
@@ -33,12 +36,13 @@ class FirebaseContainer(private val context: Context) {
             courseRepository,
             taskRepository,
             studySessionRepository,
-            noteRepository
+            noteRepository,
+            ayarlarYoneticisi
         )
     }
 
     val mainViewModelFactory by lazy {
-        MainViewModelFactory(syncManager)
+        FirebaseViewModelFactory(syncManager)
     }
 
 }
