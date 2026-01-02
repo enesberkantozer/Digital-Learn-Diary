@@ -11,10 +11,11 @@ class NoteRepository(
     private val noteDao: NoteDao,
     private val firestore: FirebaseFirestore
 ) {
-    suspend fun syncNotes() {
+    suspend fun syncNotes(userMail: String) {
         try {
             val localNotes = noteDao.getAllNote().first()
-            val remoteSnapshot = firestore.collection("notes").get().await()
+            val remoteSnapshot = firestore.collection("users")
+                .document(userMail).collection("notes").get().await()
             val remoteNotesMap = remoteSnapshot.documents.associate { it.id to it.toObject(Note::class.java) }
 
             for (localNote in localNotes) {

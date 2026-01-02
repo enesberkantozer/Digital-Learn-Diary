@@ -11,10 +11,11 @@ class StudySessionRepository(
     private val studySessionDao: StudySessionDao,
     private val firestore: FirebaseFirestore
 ) {
-    suspend fun syncSessions() {
+    suspend fun syncSessions(userMail: String) {
         try {
             val localSessions = studySessionDao.getAllSessions().first()
-            val remoteSnapshot = firestore.collection("studySessions").get().await()
+            val remoteSnapshot = firestore.collection("users")
+                .document(userMail).collection("studySessions").get().await()
             val remoteSessionsMap = remoteSnapshot.documents.associate { it.id to it.toObject(
                 StudySession::class.java) }
 

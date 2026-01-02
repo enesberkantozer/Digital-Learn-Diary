@@ -11,10 +11,11 @@ class TaskRepository(
     private val taskDao: TaskDao,
     private val firestore: FirebaseFirestore
 ) {
-    suspend fun syncTasks() {
+    suspend fun syncTasks(userMail: String) {
         try {
             val localTasks = taskDao.getAllTasks().first()
-            val remoteSnapshot = firestore.collection("tasks").get().await()
+            val remoteSnapshot = firestore.collection("users")
+                .document(userMail).collection("tasks").get().await()
             val remoteTasksMap = remoteSnapshot.documents.associate { it.id to it.toObject(Task::class.java) }
 
             for (localTask in localTasks) {
