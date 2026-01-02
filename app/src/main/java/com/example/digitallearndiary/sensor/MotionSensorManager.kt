@@ -40,7 +40,7 @@ class MotionSensorManager(
         val movement = abs(x) + abs(y) + abs(z) - SensorManager.GRAVITY_EARTH
         val now = System.currentTimeMillis()
 
-        if (movement > 2.5 && now - lastEventTime > COOLDOWN_MS) {
+        if (movement > 5 && now - lastEventTime > COOLDOWN_MS) {
             lastEventTime = now
             onEventDetected(AppSensorEvent("FOCUS_LOST", "MOTION", now))
             val intent = Intent(context, ConnectivityBroadcastReceiver::class.java)
