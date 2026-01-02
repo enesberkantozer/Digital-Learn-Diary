@@ -23,7 +23,7 @@ interface CourseDao {
     fun getAllCourse(): Flow<List<Course>>
 
     @Query("SELECT * FROM course WHERE id = :courseId")
-    suspend fun getCourseById(courseId: String): Course?
+    fun getCourseById(courseId: String): Flow<Course>
 
     @Transaction
     @Query("SELECT * FROM course WHERE id = :courseId")

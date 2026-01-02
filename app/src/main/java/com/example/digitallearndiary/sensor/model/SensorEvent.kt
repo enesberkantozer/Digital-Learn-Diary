@@ -1,4 +1,4 @@
-package com.example.digitallearndiary.model
+package com.example.digitallearndiary.sensor.model
 
 
 data class SensorEvent(

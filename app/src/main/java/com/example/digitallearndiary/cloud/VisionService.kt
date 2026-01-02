@@ -1,4 +1,4 @@
-package com.example.digitallearndiary.Cloud
+package com.example.digitallearndiary.cloud
 
 import android.content.Context
 import android.net.Uri

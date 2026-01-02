@@ -27,3 +27,7 @@ replay_pid*
 .kotlin/
 
 local.properties
+
+.idea/
+.gradle/
+build/

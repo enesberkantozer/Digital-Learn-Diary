@@ -22,6 +22,6 @@ interface StudySessionDao {
     @Query("SELECT * FROM studysession WHERE courseId = :courseId ORDER BY endTime DESC")
     fun getSessionByCourseId(courseId: String): Flow<List<StudySession>>
 
-    @Query("SELECT SUM(totalTime) FROM studysession WHERE courseId = :courseId")
-    fun getTotalStudyTimeForCourse(courseId: String): Flow<Int?>
+    @Query("SELECT SUM(hour * 3600 + min * 60 + sec) FROM studysession WHERE courseId = :courseId")
+    fun getTotalStudyTimeForCourse(courseId: String): Flow<Long?>
 }
