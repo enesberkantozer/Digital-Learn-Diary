@@ -46,7 +46,9 @@ import com.example.digitallearndiary.room.Tables.Course
 import com.example.digitallearndiary.room.Tables.Note
 import com.example.digitallearndiary.viewModels.NoteViewModel
 import com.google.android.play.integrity.internal.f
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,16 +71,27 @@ fun AddNoteScreen(
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            scope.launch {
-                // API çağrısı yapılıyor
-                val resultText = VisionService.resmiAnalizEt(context, it)
 
-                // Mevcut içeriğe ekleme yapılıyor (+= operatörü ile)
-                noteContent += "\n$resultText"
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let { selectedUri ->
+            // 2. Geçici erişim izni alma (Gerekiyorsa bayraklarla yönetilir)
+            // SAF'ta seçilen URI üzerinde okuma yetkisi otomatik verilir.
+
+            scope.launch(Dispatchers.IO) { // Ağır işlemi IO thread'ine alıyoruz
+                try {
+                    // 3. VisionService içinde ContentResolver kullanarak işleme yapın
+                    val resultText = VisionService.resmiAnalizEt(context, selectedUri)
+
+                    withContext(Dispatchers.Main) {
+                        noteContent += "\n$resultText"
+                    }
+                } catch (e: Exception) {
+                    // Hata yönetimi (Okuma izni veya dosya bulunamama durumu)
+                    e.printStackTrace()
+                }
             }
         }
     }
@@ -151,7 +164,7 @@ fun AddNoteScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { galleryLauncher.launch("image/*") },
+                onClick = { galleryLauncher.launch(arrayOf("image/*")) },
                 containerColor = courseColor,
                 contentColor = Color.White,
                 icon = { Icon(Icons.Default.ImageSearch, contentDescription = null) },
