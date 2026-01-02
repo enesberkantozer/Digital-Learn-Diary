@@ -1,6 +1,7 @@
 package com.example.digitallearndiary.ui.pages
 
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,11 +13,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -38,11 +42,21 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.digitallearndiary.auth.signInWithGoogle
 import com.example.digitallearndiary.basicData.AyarlarYoneticisi
+import com.example.digitallearndiary.firestore.repository.CourseRepository
+import com.example.digitallearndiary.firestore.repository.NoteRepository
+import com.example.digitallearndiary.firestore.repository.StudySessionRepository
+import com.example.digitallearndiary.firestore.repository.SyncManager
+import com.example.digitallearndiary.firestore.repository.TaskRepository
+import com.example.digitallearndiary.firestore.viewmodel.FirebaseViewModel
+import com.example.digitallearndiary.firestore.viewmodel.FirebaseViewModelFactory
+import com.example.digitallearndiary.room.AppDatabase
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
 @Composable
@@ -50,7 +64,23 @@ fun AuthProfileScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val database = remember { AppDatabase.getDatabase(context) }
+    val firestore = remember { FirebaseFirestore.getInstance() }
     val ayarlarYoneticisi = remember { AyarlarYoneticisi(context) }
+
+    val syncManager = remember {
+        SyncManager(
+            courseRepository = CourseRepository(database.courseDao(), firestore),
+            taskRepository = TaskRepository(database.taskDao(), firestore),
+            studySessionRepository = StudySessionRepository(database.studySessionDao(), firestore),
+            noteRepository = NoteRepository(database.noteDao(), firestore),
+            ayarlarYoneticisi = ayarlarYoneticisi
+        )
+    }
+
+    val firebaseViewModel: FirebaseViewModel = viewModel(
+        factory = FirebaseViewModelFactory(syncManager)
+    )
 
     var user by remember { mutableStateOf(Firebase.auth.currentUser) }
 
@@ -64,7 +94,6 @@ fun AuthProfileScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // İkon veya Logo Alanı
             Icon(
                 imageVector = Icons.Default.CloudSync,
                 contentDescription = null,
@@ -88,7 +117,6 @@ fun AuthProfileScreen() {
                     )
                 }
 
-                // Google Stilli Buton
                 OutlinedButton(
                     onClick = {
                         scope.launch {
@@ -97,7 +125,6 @@ fun AuthProfileScreen() {
                                 user = signedInUser
                                 signedInUser.email?.let { email ->
                                     ayarlarYoneticisi.emailKaydet(email)
-                                    Log.d("AuthProfileScreen", "Email kaydedildi: $email")
                                 }
                             }
                         }
@@ -106,10 +133,7 @@ fun AuthProfileScreen() {
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(vertical = 12.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Not: Buraya Google logosu eklenebilir
-                        Text("Google ile Devam Et")
-                    }
+                    Text("Google ile Devam Et")
                 }
             } else {
                 // Giriş Yapılmış Durum
@@ -121,14 +145,12 @@ fun AuthProfileScreen() {
                     shape = RoundedCornerShape(24.dp)
                 ) {
                     Column(
-                        // Buraya fillMaxWidth() ekledik
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        // Profil Resmi
                         AsyncImage(
                             model = user?.photoUrl,
                             contentDescription = "Profil Resmi",
@@ -139,15 +161,12 @@ fun AuthProfileScreen() {
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        Text(
-                            text = "Hoş geldin,",
-                            style = MaterialTheme.typography.labelLarge
-                        )
+                        Text(text = "Hoş geldin,", style = MaterialTheme.typography.labelLarge)
                         Text(
                             text = user?.displayName ?: "Kullanıcı",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.ExtraBold,
-                            textAlign = TextAlign.Center // Uzun isimler için metni de ortalayalım
+                            textAlign = TextAlign.Center
                         )
                         Text(
                             text = user?.email ?: "",
@@ -157,12 +176,31 @@ fun AuthProfileScreen() {
                     }
                 }
 
+                // --- 2. Manuel Senkronizasyon Butonu ---
+                // Bu buton basıldığı an tüm verileri Firestore'a gönderir
+                Button(
+                    onClick = {
+                        firebaseViewModel.syncData() // ViewModel üzerinden merkezi tetikleme
+                        Toast.makeText(context, "Senkronizasyon başlatıldı...", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Sync, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Verileri Şimdi Senkronize Et")
+                    }
+                }
+
                 TextButton(onClick = {
                     scope.launch {
                         Firebase.auth.signOut()
                         user = null
                         ayarlarYoneticisi.emailKaydet("")
-                        Log.d("AuthProfileScreen", "Oturum kapatıldı")
                     }
                 }) {
                     Text("Oturumu Kapat", color = MaterialTheme.colorScheme.error)
