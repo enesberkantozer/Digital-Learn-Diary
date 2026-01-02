@@ -20,6 +20,9 @@ interface NoteDao {
     fun getAllNote(): Flow<List<Note>>
 
     @Query("SELECT * FROM note WHERE courseId = :courseId ORDER BY createdTime DESC")
-    fun getSessionByCourseId(courseId: String): Flow<List<Note>>
+    fun getNotesByCourseId(courseId: String): Flow<List<Note>>
+
+    @Query("SELECT * FROM note WHERE id = :noteId")
+    fun getNoteById(noteId: String): Flow<Note>?
 
 }
