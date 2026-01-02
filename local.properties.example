@@ -1,0 +1,3 @@
+sdk.dir= add here sdk path
+GOOGLE_WEB_CLIENT_ID=your client id
+VISION_API_KEY= add here your api key
